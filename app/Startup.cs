@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.SpaServices.ReactDevelopmentServer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using transport_sim_app.Hubs;
 
 namespace transport_sim_app
 {
@@ -21,6 +22,8 @@ namespace transport_sim_app
         {
 
             services.AddControllersWithViews();
+
+            services.AddSignalR();
 
             // In production, the React files will be served from this directory
             services.AddSpaStaticFiles(configuration =>
@@ -41,6 +44,7 @@ namespace transport_sim_app
                 app.UseExceptionHandler("/Error");
             }
 
+            app.UseDefaultFiles();
             app.UseStaticFiles();
             app.UseSpaStaticFiles();
 
@@ -51,6 +55,7 @@ namespace transport_sim_app
                 endpoints.MapControllerRoute(
                     name: "default",
                     pattern: "{controller}/{action=Index}/{id?}");
+                endpoints.MapHub<SimulationHub>("/hubs/sim");
             });
 
             app.UseSpa(spa =>
