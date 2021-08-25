@@ -6,14 +6,51 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using transport_sim_app.Hubs.Clients;
+using transport_sim_app.Models;
 
 namespace transport_sim_app.Hubs
 {
     class SimulationHub : Hub<ISimulationClient>
     {
-        public async Task SendStartSimulation(string simId)
+        readonly ISimulationRepository _repository;
+        public SimulationHub(ISimulationRepository repository)
         {
-            await Clients.All.StartSimulationNotification(simId);
+            _repository = repository;
+        }
+
+        // public async Task SendStartSimulation(string simId)
+        // {
+        //     await Clients.All.StartSimulationNotification(simId);
+        // }
+
+        public ChannelReader<SimulationEventArgs> SimulationUpdate(
+            CancellationToken cancellationToken
+        ){
+            var channel = Channel.CreateUnbounded<SimulationEventArgs>();
+            EventHandler<SimulationEventArgs> updateHandler = async (sender, e) => {
+                try
+                {
+                    if (cancellationToken.IsCancellationRequested) return;
+                    await channel.Writer.WriteAsync(e, cancellationToken);
+                }
+                catch (System.Exception ex)
+                {
+                    channel.Writer.Complete(ex);
+                }
+            };
+            _repository.UpdateEvent += updateHandler;
+            _repository.StopEvent += async (sender, e) => {
+                _repository.UpdateEvent -= updateHandler;
+                try {
+                    await channel.Writer.WriteAsync(e, cancellationToken);
+                    channel.Writer.Complete();
+                }
+                catch(Exception ex) {
+                    channel.Writer.Complete(ex);
+                }
+                
+            };
+            return channel.Reader;
         }
         public ChannelReader<int> Counter(
             CancellationToken cancellationToken

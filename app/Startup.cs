@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using transport_sim_app.Hubs;
+using transport_sim_app.Models;
 
 namespace transport_sim_app
 {
@@ -22,6 +23,8 @@ namespace transport_sim_app
         {
 
             services.AddControllersWithViews();
+            services.AddControllers();
+            services.AddMvc();
 
             services.AddSignalR();
 
@@ -30,6 +33,9 @@ namespace transport_sim_app
             {
                 configuration.RootPath = "ClientApp/build";
             });
+
+            services.AddHostedService<SimulationWorker>();
+            services.AddSingleton<ISimulationRepository, SimulationRepository>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -50,11 +56,16 @@ namespace transport_sim_app
 
             app.UseRouting();
 
+            app.UseHttpsRedirection();
+
+            app.UseAuthorization();
+
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllerRoute(
                     name: "default",
                     pattern: "{controller}/{action=Index}/{id?}");
+                endpoints.MapControllers();
                 endpoints.MapHub<SimulationHub>("/hubs/sim");
             });
 
@@ -64,7 +75,8 @@ namespace transport_sim_app
 
                 if (env.IsDevelopment())
                 {
-                    spa.UseReactDevelopmentServer(npmScript: "start");
+                    // spa.UseReactDevelopmentServer(npmScript: "start");
+                    spa.UseProxyToSpaDevelopmentServer("http://localhost:3000");
                 }
             });
         }
