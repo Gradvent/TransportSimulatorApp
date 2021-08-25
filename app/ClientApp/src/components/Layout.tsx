@@ -1,32 +1,18 @@
-import React, { Component } from 'react';
-import { Container, CssBaseline, makeStyles } from '@material-ui/core';
+import React from 'react';
 import { NavMenu } from './NavMenu';
 
-const useStyles = makeStyles((theme) => ({
-  root: {
-    display: 'flex'
-  },
-  content: {
-    flexGrow: 1,
-    height: '100vh',
-    overflow: 'auto',
-  },
-  appBarSpacer: theme.mixins.toolbar
-}))
 
 export function Layout(props: React.PropsWithChildren<{}>) {
-  const classes = useStyles();
   return (
-    <div className={classes.root}>
-      <CssBaseline />
+    <div>
       <NavMenu />
-      <main className={classes.content}>
-        <div className={classes.appBarSpacer} />
-        <Container>
+      <main>
+        <div />
+        <div>
           <div>
             {props.children}
           </div>
-        </Container>
+        </div>
       </main>
 
     </div>

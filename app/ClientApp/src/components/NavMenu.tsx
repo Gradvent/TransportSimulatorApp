@@ -1,5 +1,4 @@
 import React, { Component } from 'react';
-import { AppBar, Collapse, Container, Toolbar, Typography } from '@material-ui/core';
 // import { Link } from 'react-router-dom';
 
 interface INavMenuState {
@@ -26,13 +25,13 @@ export class NavMenu extends Component<any, INavMenuState> {
 
   render() {
     return (
-      <AppBar>
-        <Toolbar>
-          <Container>
-            <Typography  component="h1" variant="h6" color="inherit" noWrap >TransportSim</Typography>
-          </Container>
-        </Toolbar>
-      </AppBar>
+      <div>
+        <div>
+          <div>
+            <span >TransportSim</span>
+          </div>
+        </div>
+      </div>
     );
   }
 }
