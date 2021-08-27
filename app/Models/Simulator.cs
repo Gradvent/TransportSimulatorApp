@@ -3,7 +3,7 @@ using System;
 
 namespace transport_sim_app.Models
 {
-    public class Simulator
+    public class Simulator : ISimulationScope
     {
         private readonly Random _rnd = new Random();
         public bool AllFinished { get; set; }
@@ -12,14 +12,14 @@ namespace transport_sim_app.Models
 
         void SimulateRepairing(Transport _transport)
         {
-            bool repaired = DateTime.Now.TimeOfDay - _transport.WheelPuncturedAt > _transport.RepairTime;
+            bool repaired = (DateTime.Now - _transport.WheelPuncturedAt)?.TotalSeconds > _transport.RepairTimeSeconds;
             if (repaired) _transport.WheelPuncturedAt = null;
         }
 
         void SimulatePuncturing(Transport _transport)
         {
             if (_rnd.NextDouble() <= _transport.WheelPunctureProbability)
-                _transport.WheelPuncturedAt = DateTime.Now.TimeOfDay;
+                _transport.WheelPuncturedAt = DateTime.Now;
         }
 
         void SimulateMoving(Transport _transport)
@@ -31,7 +31,7 @@ namespace transport_sim_app.Models
             if (_transport.Finished) return;
             if (_transport.DistanceTraveled >= TrackDistance)
             {
-                _transport.FinishedAt = DateTime.Now.TimeOfDay;
+                _transport.FinishedAt = DateTime.Now;
                 return;
             }
             AllFinished = false;

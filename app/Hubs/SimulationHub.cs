@@ -1,6 +1,6 @@
 
 using System;
-using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -16,6 +16,17 @@ namespace transport_sim_app.Hubs
         public SimulationHub(ISimulationRepository repository)
         {
             _repository = repository;
+            // _repository.ScopeUpdateEvent += SimulationScopeUpdated; 
+        }
+
+        async void SimulationScopeUpdated(object sender, SimulationEventArgs e)
+        {
+            await Clients.All.ScopeUpdatedNotification(new ScopeUpdatedNotificationArgs
+            {
+                Transports = e.Transports.ToArray<ITransport>(),
+                TrackDistance = e.TrackDistance,
+                AllFinished = e.Transports.All((t)=>t.Finished)
+            });
         }
 
         // public async Task SendStartSimulation(string simId)
@@ -23,35 +34,46 @@ namespace transport_sim_app.Hubs
         //     await Clients.All.StartSimulationNotification(simId);
         // }
 
-        public ChannelReader<SimulationEventArgs> SimulationUpdate(
+        public ChannelReader<SimulationEventArgs<object>> SimulationUpdate(
             CancellationToken cancellationToken
         ){
-            var channel = Channel.CreateUnbounded<SimulationEventArgs>();
-            EventHandler<SimulationEventArgs> updateHandler = async (sender, e) => {
-                try
-                {
-                    if (cancellationToken.IsCancellationRequested) return;
-                    await channel.Writer.WriteAsync(e, cancellationToken);
-                }
-                catch (System.Exception ex)
-                {
-                    channel.Writer.Complete(ex);
-                }
-            };
-            _repository.UpdateEvent += updateHandler;
-            _repository.StopEvent += async (sender, e) => {
-                _repository.UpdateEvent -= updateHandler;
-                try {
-                    await channel.Writer.WriteAsync(e, cancellationToken);
-                    channel.Writer.Complete();
-                }
-                catch(Exception ex) {
-                    channel.Writer.Complete(ex);
-                }
-                
-            };
+            var channel = Channel.CreateUnbounded<SimulationEventArgs<object>>();
+            _ = UpdateAsync(channel.Writer, cancellationToken);
             return channel.Reader;
         }
+
+        async Task UpdateAsync(
+            ChannelWriter<SimulationEventArgs<object>> writer,
+            CancellationToken cancellationToken
+        ){
+            Exception localException = null;
+            try
+            {
+                while (true)
+                {
+                    if (cancellationToken.IsCancellationRequested) break;
+                    var sa = _repository.SimulationArgs;
+                    await writer.WriteAsync(
+                        new SimulationEventArgs<object>{
+                            Message = sa.Message,
+                            Status = sa.Status,
+                            TrackDistance = sa.TrackDistance,
+                            Transports = sa.Transports.ToArray<object>()
+                        }, 
+                        cancellationToken);
+                    await Task.Delay(1000);
+                }
+            }
+            catch (Exception ex)
+            {
+                localException = ex;
+            }
+            finally
+            {
+                writer.Complete(localException);
+            }
+        }
+
         public ChannelReader<int> Counter(
             CancellationToken cancellationToken
         ){

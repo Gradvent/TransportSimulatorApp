@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.SpaServices.ReactDevelopmentServer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using transport_sim_app.Convert;
 using transport_sim_app.Hubs;
 using transport_sim_app.Models;
 
@@ -23,7 +24,11 @@ namespace transport_sim_app
         {
 
             services.AddControllersWithViews();
-            services.AddControllers();
+            services.AddControllers()
+                .AddJsonOptions(options=>{
+                    options.JsonSerializerOptions.Converters.Add(new DateTimeConverter());
+                    options.JsonSerializerOptions.Converters.Add(new TimeSpanConverter());
+                });
             services.AddMvc();
 
             services.AddSignalR();

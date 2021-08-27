@@ -4,6 +4,9 @@ namespace transport_sim_app.Models
 {
     class Motorbike : Transport
     {
+        public Motorbike() {
+            Type = nameof(Motorbike);
+        }
         public bool HasSidecar { get; set;}
         public override IDictionary<string, object> getCharacteristics()
         {

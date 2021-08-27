@@ -1,13 +1,13 @@
 
 using System;
-using System.Collections;
+using System.Linq;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace transport_sim_app.Models
 {
-
     class SimulationRepository : ISimulationRepository
     {
         readonly IConfiguration _config;
@@ -15,91 +15,109 @@ namespace transport_sim_app.Models
         static readonly IList<Transport> _transports = new List<Transport>();
         // static readonly float _trackDistance = 20000;
         static readonly Random _rnd = new Random();
-        static readonly Simulator _simulator = new Simulator();
+        static readonly Simulator _simulator = new Simulator() { AllFinished = false };
 
-        public SimulationRepository(IConfiguration config)
+        public IEnumerable<Transport> Transports => _transports;
+
+        readonly ILogger<SimulationRepository> _logger;
+        private readonly TransportFactory _transportFactory;
+
+        public SimulationRepository(IConfiguration config, ILogger<SimulationRepository> logger)
         {
             _config = config;
             if (_transports.Count == 0)
             {
                 var initRand = new Random((int)(Math.PI * 1000));
-                _simulator.TrackDistance = 200;
+                _simulator.TrackDistance = 
+                    _config.GetValue<float>("SIMULATION_DISTANCE", 500);
+                var randomTransport = 
+                    _config.GetValue<bool>("SIMULATION_RAND_TRANSPORT", true);
+                _transportFactory = new TransportFactory(_config);
                 var transports = SimulationRepository._transports;
-                Transport t = null;
-                for (int i = 0; i < 10; i++)
-                {
-                    t = initRand.Next(100) switch
-                    {
-                        > 50 => new Motorbike
-                        {
-                            HasSidecar = initRand.NextDouble() < .2
-                        },
-                        > 20 => new Automobile
-                        {
-                            PersonCount = initRand.Next(1, 6)
-                        },
-                        _ => new Truck
-                        {
-                            CargoWeight = initRand.Next(10000)
-                        }
-                    };
-                    t.Name = $"{t.Type} {initRand.Next(10000)}";
-                    t.RepairTime = TimeSpan.FromSeconds(initRand.Next(30));
-                    t.Speed = initRand.Next(100);
-                    t.WheelPunctureProbability = (float)initRand.NextDouble();
-                    transports.Add(t);
-                }
-
+                if (randomTransport) {
+                    var count = 
+                        _config.GetValue<int>("SIMULATION_TRANSPORT_COUNT", 10);
+                    _transportFactory.RandomPush(transports, count);
+                } else _transportFactory.AddRangeTo(transports);
             }
+            _logger = logger;
+            Task.Run(Start);
         }
 
         private bool disposedValue;
 
         public bool IsRunning { get; protected set; } = false;
+        public SimulationStatus Status { get => _status; set {
+            if (_status != value)
+                _logger.LogInformation($"Simulation status setted {value.ToString()}");
+            _status = value;
+        } }
+
+        public SimulationEventArgs SimulationArgs { 
+            get; 
+            private set; 
+        }
+
         static SimulationStatus _status = SimulationStatus.Stopped;
-        static bool _allFinished = false;
 
         // public event EventHandler StartEvent;
         public event EventHandler<SimulationEventArgs> UpdateEvent;
         public event EventHandler<SimulationEventArgs> StartEvent;
         public event EventHandler<SimulationEventArgs> StopEvent;
+        public event EventHandler<SimulationEventArgs> ScopeUpdateEvent;
+        public event EventHandler<SimulationEventArgs> FinishEvent;
+
+        void OnSimulationEvent<TArgs>(EventHandler<TArgs> eventHandler, TArgs args)
+        {
+            if (eventHandler != null)
+                eventHandler(this, args);
+        }
 
         public Task Pause()
         {
-            _status = SimulationStatus.Paused;
+            Status = SimulationStatus.Paused;
             return Task.CompletedTask;
         }
 
         public Task Start()
         {
+            if (IsRunning) return Task.CompletedTask;
             IsRunning = true;
-            _status = SimulationStatus.Started;
+            Status = SimulationStatus.Started;
+            if (_transports.Count == 0) return Stop();
+            _simulator.AllFinished = false;
 
-            var time = DateTime.Now.TimeOfDay;
+            var time = DateTime.Now;
             foreach (var t in _transports)
             {
                 t.DistanceTraveled = .0f;
                 t.StartedAt = time;
                 t.FinishedAt = null;
             }
-
-            if (StartEvent != null)
-                return Task.Run(() => StartEvent(this, new SimulationEventArgs
-                {
-                    Message = "Simulation started"
-                }));
+            SimulationArgs = new SimulationEventArgs
+            {
+                Message = "Simulation started",
+                Status = Status.ToString(),
+                TrackDistance = _simulator.TrackDistance,
+                Transports = _transports
+            };
+            OnSimulationEvent(StartEvent, SimulationArgs);
             return Task.CompletedTask;
         }
 
         public Task Stop()
         {
+            if (!IsRunning) return Task.CompletedTask;
             IsRunning = false;
-            _status = SimulationStatus.Stopped;
-            if (StopEvent != null)
-                return Task.Run(() => StopEvent(this, new SimulationEventArgs
-                {
-                    Message = "Simulation stopped"
-                }));
+            Status = SimulationStatus.Stopped;
+            SimulationArgs = new SimulationEventArgs
+            {
+                Message = "Simulation stopped",
+                Status = Status.ToString(),
+                TrackDistance = _simulator.TrackDistance,
+                Transports = _transports
+            };
+            OnSimulationEvent(StopEvent, SimulationArgs); 
             return Task.CompletedTask;
         }
 
@@ -112,28 +130,60 @@ namespace transport_sim_app.Models
         public Task Update()
         {
             if (!IsRunning) return Task.CompletedTask;
-            _status = SimulationStatus.Running;
-
+            Status = SimulationStatus.Running;
+            if (_simulator.AllFinished) 
+            {
+                Finish();
+                return Task.CompletedTask;
+            }
             _simulator.AllFinished = true; // Флаг финиша всех транспорта для окончания гонки
             var rnd = new Random();
             // Обновление состояния каждого транспорта
             foreach (var t in _transports) 
                 _simulator.Simulate(t);
-
-            if (UpdateEvent != null)
-                return Task.Run(() => UpdateEvent(this, 
-                    new SimulationEventArgs {
-                        Message = "Simulation is running",
-                        Status = _status.ToString(),
-                        TrackDistance = _simulator.TrackDistance,
-                        Transports = _transports
-                }));
-
-            if (_simulator.AllFinished) Stop();
+            SimulationArgs = new SimulationEventArgs
+            {
+                Message = "Simulation is running",
+                Status = Status.ToString(),
+                TrackDistance = _simulator.TrackDistance,
+                Transports = _transports
+            };
+            OnSimulationEvent(UpdateEvent, SimulationArgs);
             return Task.CompletedTask;
         }
 
-        
+
+        public Task Finish()
+        {
+            if (Status == SimulationStatus.Finished) return Task.CompletedTask;
+            IsRunning = false;
+            Status = SimulationStatus.Finished;
+            SimulationArgs = new SimulationEventArgs {
+                Message = "Simulation finished",
+                Status = Status.ToString(),
+                TrackDistance = _simulator.TrackDistance,
+                Transports = _transports,
+            };
+            OnSimulationEvent(FinishEvent, SimulationArgs);
+            return Task.CompletedTask;
+        }
+
+        void ScopeUpdate()
+        {
+            SimulationArgs = new SimulationEventArgs
+            {
+                Message = "Scope updated",
+                Status = Status.ToString(),
+                TrackDistance = _simulator.TrackDistance,
+                Transports = _transports
+            };
+            OnSimulationEvent(ScopeUpdateEvent, SimulationArgs);
+        }
+        public void AddTransport(Transport transport)
+        {
+            _transports.Add(transport);
+            ScopeUpdate();
+        }
 
         protected virtual void Dispose(bool disposing)
         {
@@ -163,34 +213,23 @@ namespace transport_sim_app.Models
             Dispose(disposing: true);
             GC.SuppressFinalize(this);
         }
-    }
 
-    public interface ISimulationRepository : IDisposable
-    {
-        bool IsRunning { get; }
-        Task Start();
-        Task StopForce();
-        Task Stop();
-        Task Pause();
-        Task Update();
+        public void UpdateTransport(Transport oldItem, Transport newItem)
+        {
+            _transports.Remove(oldItem);
+            _transports.Add(newItem);
+        }
 
-        event EventHandler<SimulationEventArgs> UpdateEvent;
-        event EventHandler<SimulationEventArgs> StartEvent;
-        event EventHandler<SimulationEventArgs> StopEvent;
-        // IEnumerable<ITransport> Transports { get; }
-    }
+        public Transport DeleteTransport(string id)
+        {
+            var item = _transports.First(t=>t.Id == id);
+            _transports.Remove(item);
+            return item;
+        }
 
-    public enum SimulationStatus
-    {
-        Stopped, Started, Running, Paused
-    }
-
-    public class SimulationEventArgs
-    {
-        public string Status { get; set; }
-        public string Message { get; set; }
-        public float TrackDistance { get; set; }
-
-        public IEnumerable<Transport> Transports { get; set; }
+        public void SetDistance(int distance)
+        {
+            _simulator.TrackDistance = distance;
+        }
     }
 }

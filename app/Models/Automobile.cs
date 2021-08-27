@@ -5,6 +5,9 @@ namespace transport_sim_app.Models
     internal class Automobile: Transport
     {
         public int PersonCount { get; set; }
+        public Automobile() { 
+            Type = nameof(Automobile);
+        }
         public override IDictionary<string, object> getCharacteristics()
         {
             var character = base.getCharacteristics();
