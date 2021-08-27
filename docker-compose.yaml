@@ -1,0 +1,14 @@
+version: "3.8"
+
+services: 
+  webapi:
+    # developent service for vscode dev-container
+    image: mcr.microsoft.com/dotnet/sdk:5.0
+    volumes: 
+      - ./app:/app
+    ports:
+      - 8080:80
+    environment: 
+      - ASPNETCORE_URLS=http://+:80
+      - ASPNETCORE_ENVIRONMENT=Development
+    working_dir: /app
