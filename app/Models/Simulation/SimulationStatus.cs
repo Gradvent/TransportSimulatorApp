@@ -1,4 +1,4 @@
-namespace transport_sim_app.Models
+namespace transport_sim_app.Models.Simulation
 {
     public enum SimulationStatus
     {

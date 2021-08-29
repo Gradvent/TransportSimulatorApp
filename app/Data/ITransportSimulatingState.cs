@@ -1,9 +1,9 @@
 
 using System;
 
-namespace transport_sim_app.Models
+namespace transport_sim_app.Data
 {
-    internal interface ITransportState
+    public interface ITransportSimulatingState
     {
         DateTime? StartedAt { get; set; }
         bool Started { get => StartedAt != null; }

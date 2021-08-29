@@ -1,7 +1,8 @@
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using transport_sim_app.Models;
+using transport_sim_app.Data;
+using transport_sim_app.Models.Simulation;
 
 namespace transport_sim_app.Hubs.Clients
 {

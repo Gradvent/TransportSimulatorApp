@@ -4,9 +4,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using transport_sim_app.Models;
 using Microsoft.Extensions.Configuration;
 using System.Collections.Generic;
+using transport_sim_app.Models.Repository;
+using transport_sim_app.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace transport_sim_app.Controllers
 {
@@ -15,40 +17,41 @@ namespace transport_sim_app.Controllers
     {
         readonly ISimulationRepository _repository;
         readonly ILogger<SimulationController> _logger;
-        private readonly IConfiguration _config;
+        private readonly SimulationOptions _options;
 
         public SimulationController(
             ISimulationRepository repository,
-            ILogger<SimulationController> logger, IConfiguration config)
+            ILogger<SimulationController> logger, 
+            IOptions<SimulationOptions> options)
         {
             _repository = repository;
             _logger = logger;
-            _config = config;
+            _options = options.Value;
         }
 
         [HttpGet("start")]
-        public ActionResult GetStart() {
-            _repository.Start();
+        public async Task<ActionResult> GetStart() {
+            await _repository.Simulation.Start();
             return Ok();
         } 
         
         [HttpPost("distance/{distance}")]
-        public ActionResult GetStart(int distance) {
+        public ActionResult SetDistance(int distance) {
             
-            _repository.SetDistance(distance);
+            _repository.Simulation.Options.Distance = distance;
             return Ok();
         } 
 
         [HttpGet("stop")]
-        public ActionResult GetStop() {
-            _repository.Stop();
+        public async Task<ActionResult> GetStop() {
+            await _repository.Simulation.Stop();
             return Ok();
         }
 
         [HttpGet("config")]
         public ActionResult GetConfig() {
 
-            return Ok();
+            return Ok((object)_options);
         }
     }
 }

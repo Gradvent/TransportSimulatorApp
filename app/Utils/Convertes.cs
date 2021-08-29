@@ -16,7 +16,7 @@ namespace transport_sim_app.Convert
 
         public override void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)
         {
-            writer.WriteStringValue(value.ToUniversalTime().ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'sssZ"));
+            writer.WriteStringValue(value.ToUniversalTime().ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fffZ"));
         }
     }public class TimeSpanConverter : JsonConverter<TimeSpan>
     {
@@ -30,7 +30,7 @@ namespace transport_sim_app.Convert
         {
             var dt = new DateTime();
             dt.Add(value);
-            writer.WriteStringValue(dt.ToString("'0000T'hh':'mm':'ss'.'sss"));
+            writer.WriteStringValue(dt.ToString("'0000T'HH':'mm':'ss'.'fff"));
         }
     }
 }

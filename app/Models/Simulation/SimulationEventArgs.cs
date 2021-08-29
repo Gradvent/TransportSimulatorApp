@@ -1,8 +1,9 @@
 using System.Collections.Generic;
+using transport_sim_app.Data;
 
-namespace transport_sim_app.Models
+namespace transport_sim_app.Models.Simulation
 {
-    public class SimulationEventArgs : SimulationEventArgs<Transport>
+    public class SimulationEventArgs : SimulationEventArgs<ITransport>
     {
     }
 
