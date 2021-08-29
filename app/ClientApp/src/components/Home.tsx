@@ -15,22 +15,22 @@ interface ScopeUpdatedNotificationArgs {
 
 interface TransportScope {
   id: string
-  speed: number
-  wheelPunctureProbability: number
-  repairTimeSeconds: number
-  type: string
-  name: string
+  speed?: number
+  wheelPunctureProbability?: number
+  repairTimeSeconds?: number
+  type?: string
+  name?: string
   [key: string]: any
 }
 
 interface TransportState {
-  startedAt: Date
-  started: boolean
-  finishedAt: Date
-  finished: boolean
-  distanceTraveled: number
-  wheelPunctured: boolean
-  wheelPuncturedAt: Date
+  startedAt?: Date
+  started?: boolean
+  finishedAt?: Date
+  finished?: boolean
+  distanceTraveled?: number
+  wheelPunctured?: boolean
+  wheelPuncturedAt?: Date
 }
 
 interface Transport extends TransportScope, TransportState {
@@ -49,13 +49,13 @@ interface TransportScopeRowProps {
   deleteItem?: () => void
 }
 interface TransportEditorProps {
-  transport: TransportScope,
+  transport?: TransportScope,
   saveItem?: (item: TransportScope) => void
 }
 
 export function TransportEditor({ transport }: TransportEditorProps) {
   const [item, setItem] = useState(transport);
-  const save = () => fetch(`/transport/${item.id}`, {
+  const save = () => !!item && fetch(`/transport/${item.id}`, {
     body: JSON.stringify(item),
     method: "PUT",
     headers: {
@@ -66,6 +66,7 @@ export function TransportEditor({ transport }: TransportEditorProps) {
   return <table>
     <thead><tr><th><td colSpan={2}>Editor</td></th></tr></thead>
     <tbody>
+      {!!item ? <>
       <tr>
         <td>Name</td>
         <td><input onChange={(e) => setItem({ ...item, name: e.target.value })} value={item.name} /></td></tr>
@@ -104,6 +105,9 @@ export function TransportEditor({ transport }: TransportEditorProps) {
           <button onClick={() => save()}>Save</button>
         </td>
       </tr>
+      </> : <tr>
+        <td colSpan={2}>Click "Edit" for editing item</td>
+      </tr>}
     </tbody>
   </table>
 }
@@ -142,7 +146,7 @@ export function TransportScopeRow({ transport, editItem, deleteItem }: Transport
       <td>{transport.type}</td>
       <td>{transport.speed} km/h</td>
       <td>{transport.repairTimeSeconds}s</td>
-      <td>{Math.round(transport.wheelPunctureProbability * 100)}%</td>
+      <td>{Math.round((transport.wheelPunctureProbability ?? 0) * 100)}%</td>
       <td>
         {transport.type == "Automobile" && <><span>Person</span> <span>{transport.personCount}</span></>}
         {transport.type == "Truck" && <><span>Cargo Weight</span> <span>{transport.cargoWeight}</span></>}
@@ -182,9 +186,9 @@ export function Home() {
       ...state,
       transports: state?.transports?.map<Transport>((t) => ({
         ...t,
-        startedAt: new Date(t.startedAt),
-        finishedAt: new Date(t.finishedAt),
-        wheelPuncturedAt: new Date(t.wheelPuncturedAt)
+        startedAt: new Date(t.startedAt ?? 0),
+        finishedAt: new Date(t.finishedAt ?? 0),
+        wheelPuncturedAt: new Date(t.wheelPuncturedAt ?? 0)
       }))
     })
   }
@@ -221,14 +225,6 @@ export function Home() {
             })
             newSimState.transports = Object.values(dict);
             setSimArgsFetchHandler(newSimState);
-          })
-        connection.stream('Counter')
-          .subscribe({
-            next: (value) => {
-              setTime(value);
-            },
-            complete() { },
-            error() { }
           });
         connection.stream('SimulationUpdate')
           .subscribe({
@@ -262,23 +258,23 @@ export function Home() {
   });
 
   const finishedTransport = simState?.transports
-    ?.filter((t) => t.finished)
-    .sort((a, b) => a.finishedAt.valueOf() - b.finishedAt.valueOf()) ?? []
+    ?.filter((t) => t.finished ?? false)
+    .sort((a, b) => a.finishedAt?.valueOf()! - b.finishedAt?.valueOf()!) ?? []
   const runningTransport = simState?.transports
     ?.filter((t) => !t.finished && t.started)
-    .sort((a, b) => b.distanceTraveled - a.distanceTraveled) ?? []
+    .sort((a, b) => b.distanceTraveled! - a.distanceTraveled!) ?? []
 
   const transports = simState?.transports ?? [];
 
   return (
     <div>
-      <h1>Welcome to demonstration</h1>
-      <p>SignalR server-to-client data streaming</p>
-      <p>You is online at {time} seconds</p>
+      <h2>Welcome to demonstration</h2>
       <div>
         <div><span>Simulation</span></div>
-        <div><button onClick={startHandler}>Start</button></div>
-        <div><button onClick={stopHandler}>Stop</button></div>
+        <div>
+          <button onClick={startHandler}>Start</button>
+          <button onClick={stopHandler}>Stop</button>
+        </div>
         <div>{simState?.message}</div>
         <div>Simulation status: {simState?.status}</div>
         <div>Distance: {simState?.trackDistance} <button onClick={()=>{setDistanceEditing(!distanceEditing)}}>Edit</button></div>
@@ -306,7 +302,7 @@ export function Home() {
               }} />)}
           </tbody>
         </table>
-        {editingItem && <TransportEditor transport={editingItem} />}
+        <TransportEditor transport={editingItem} />
         <div style={{ margin: "10px" }}>
           {finishedTransport.length > 0 && <table>
             <thead>
@@ -326,7 +322,7 @@ export function Home() {
               {finishedTransport.map((t, rang) => <tr key={t.id}>
                 <td>#{rang + 1}</td>
                 <td>{t.name} {t.wheelPunctured && "[punctured]"}</td>
-                <td>{t.finishedAt.toLocaleTimeString()}</td>
+                <td>{t.finishedAt?.toLocaleTimeString()}</td>
                 <td>{t.type}</td>
               </tr>)}
             </tbody>

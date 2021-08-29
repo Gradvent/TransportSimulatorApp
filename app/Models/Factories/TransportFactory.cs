@@ -34,7 +34,7 @@ namespace transport_sim_app.Models.Factories
             transport.DistanceTraveled = 0;
             transport.Speed = options.Speed;
             transport.RepairTimeSeconds = options.RepairSeconds;
-            transport.WheelPunctureProbability = options.PunctureProbability;
+            transport.WheelPunctureProbability = options.PunctureProbability / 100.0f;
         }
         public virtual ITransport Create()
         {

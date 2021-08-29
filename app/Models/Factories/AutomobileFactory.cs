@@ -7,6 +7,8 @@ namespace transport_sim_app.Models.Factories
 {
     internal class AutomobileFactory : TransportFactory
     {
+        static int count = 1;
+
         public AutomobileFactory(IOptions<TransportOptions> transportOptions) : base(transportOptions)
         {
         }
@@ -14,7 +16,8 @@ namespace transport_sim_app.Models.Factories
         public override ITransport Create()
         {
             var t = new Automobile {
-                PersonCount = _transportOptions.AutomobilePersons
+                PersonCount = _transportOptions.AutomobilePersons,
+                Name = $"Automobile #{count++}"
             };
             Init(t);
             return t;
