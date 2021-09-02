@@ -1,0 +1,24 @@
+{
+    "Simulation": {
+        "Distance": 600,
+        "SimulationSeed": "1111"
+    },
+    "Transport": {
+        "TruckCargo": 2000,
+        "AutomobilePersons": 2,
+        "MotorbikeHasSidecar": true,
+        "Speed": 50,
+        "RepairSeconds": 5,
+        "PunctureProbability": 35
+    },
+    "Factory": {
+        "RandTransport": true,
+        "RandTransportCount": 10,
+        "Seed": "87309",
+        "Count": {
+            "Truck": 4,
+            "Automobile": 2,
+            "Motorbike": 6
+        }
+    }
+}

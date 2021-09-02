@@ -1,0 +1,11 @@
+version: "3.8"
+
+services: 
+  webapi:
+    # developent service for vscode dev-container
+    build: .
+    ports:
+      - 8080:80
+    environment: 
+      - ASPNETCORE_URLS=http://+:80
+      - ASPNETCORE_ENVIRONMENT=Development
