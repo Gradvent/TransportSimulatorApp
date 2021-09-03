@@ -39,7 +39,7 @@ namespace Microsoft.Extensions.DependencyInjection
             services.AddScoped<ISimulationRepository, SimulationRepository>();
             
             services.AddSingleton<ISimulation, Simulator>();
-            services.AddHostedService<SimulationWorker>();
+            // services.AddHostedService<SimulationWorker>();
             return services;
         }
 
